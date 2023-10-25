@@ -1,13 +1,17 @@
+//SECTION
+// data-click-section="can has class"
+
+//BUTTON
+// data-click-fixed="class section"
 // data-click-close;
 // data-click-option="ADD/REMOVE/TOGGLE";
-// data-click-section
 // data-click-checkbox="BOOLEAN"
 // data-click-btn="CLASS"
-// data-click-fixed="BOOLEAN"
 // data-click-body="classes for body, through ,"
 
-export const onAnyClick = () => {
+export const onClickBtn = () => {
     const ELEMENTS = new Map();
+    const body = document.body;
 
     const setDefaultElemes = () => {
         const buttons = document.querySelectorAll('[data-click-btn]');
@@ -20,10 +24,11 @@ export const onAnyClick = () => {
     };
     setDefaultElemes();
 
+
+
     const getCloseButton = (target) => {
         let closeButton = target.closest('[data-click-close]');
         if (!closeButton) return;
-
         let element = null;
 
         if (closeButton) {
@@ -39,48 +44,60 @@ export const onAnyClick = () => {
         return element;
     }
 
+
+
     const removeClassFromBody = (hasBody) => {
         const arr = hasBody.split(',');
-        arr.forEach(item => document.body.classList.remove(item.trim()));
+        arr.forEach(item => body.classList.remove(item.trim()));
+    }
+
+    const removeAll = (section, button, ELEMENTS, hasBody) => {
+        section.classList.remove('show');
+        button.classList.remove('active');
+        ELEMENTS.delete(button);
+
+        if (hasBody) {
+            removeClassFromBody(hasBody);
+        }
     }
 
     const reset = (currentSection, target, method) => {
-        for (let item of ELEMENTS) {
-            const array = item[1];
-            const section = array[0];
-            const button = array[1];    
-            const hasBody = array[2];  
-            const fixed = section.dataset.clickFixed ? true : false;   
+        ELEMENTS.forEach(item => {
+            const section = item[0];
+            const button = item[1];    
+            const hasBody = item[2];  
+            const fixed = button.dataset.clickFixed ? button.dataset.clickFixed : false;   
+            let hasInner = section.dataset.clickSection?.length > 0 ? true : false;
             let currentClass = currentSection ? currentSection.classList[0] : false;
             let hasChild = section.querySelector(`.${currentClass}`);
-            hasChild = hasChild ? false : true;
+            hasChild = hasChild ? true : false;
             let closeButton = getCloseButton(target)
+            let nameInnerSection = null;
+            let checkIsFixedButtons = target.dataset.clickFixed ? target.dataset.clickFixed : false;
             
-            if (!!closeButton && section === closeButton) {
-                section.classList.remove('show');
-                button.classList.remove('active');
-                ELEMENTS.delete(item[0]);
-                
-                if (hasBody) {
-                    removeClassFromBody(hasBody);
-                }
+            if (fixed && checkIsFixedButtons) {
+                checkIsFixedButtons = fixed === checkIsFixedButtons;
+            }
+            
+            if (hasInner) {
+                nameInnerSection = target.closest(`.${section.dataset.clickSection}`);
             }
 
-            if (section !== currentSection && hasChild) {
-                if (method !== 'default' && !fixed 
-                    ||method === 'default' && !fixed 
-                    || method === 'click' && fixed ) {
-                    section.classList.remove('show');
-                    button.classList.remove('active');
-                    ELEMENTS.delete(item[0]);
-                    
-                    if (hasBody) {
-                        removeClassFromBody(hasBody);
-                    }
+            if (!fixed || checkIsFixedButtons) {
+                if (section !== currentSection && !hasChild) {
+                    removeAll(section, button, ELEMENTS, hasBody);
+                }
+                if (!!closeButton && section === closeButton) {
+                    removeAll(section, button, ELEMENTS, hasBody);
+                }
+                if (section === currentSection && hasInner && !nameInnerSection) {
+                    removeAll(section, button, ELEMENTS, hasBody);
                 }
             } 
-        }
+        });
     };
+
+    
     
     document.addEventListener('click', (evt) => {
         const target = evt.target;
@@ -94,7 +111,6 @@ export const onAnyClick = () => {
             const checkbox = button.dataset.clickCheckbox ? button.dataset.clickCheckbox : false;
             const hasClickBody = button.dataset.clickBody ? button.dataset.clickBody : false;
 
-
             if (!checkbox) {
                 reset(section, target, 'click');
             }
@@ -106,7 +122,13 @@ export const onAnyClick = () => {
             if (hasClickBody) {
                 const classes = hasClickBody.split(',');
                 classes.forEach(item => {
-                    document.body.classList.add(item.trim());
+                    const trimItem = item.trim();
+
+                    if (body.classList.contains(trimItem)) {
+                        body.classList.remove(trimItem);
+                    } else {
+                        body.classList.add(trimItem);
+                    }
                 })
             }
             
@@ -117,6 +139,7 @@ export const onAnyClick = () => {
             if (option === 'remove') {
                 section.classList.remove('show');
                 button.classList.remove('active');
+                ELEMENTS.delete(button);
             }
             if (option === 'toggle') {
                 section.classList.toggle('show');
@@ -126,5 +149,28 @@ export const onAnyClick = () => {
             const currentSection = target.closest('[data-click-section]');
             reset(currentSection, target, 'default')
         }
+    });
+
+    window.addEventListener('keydown', (evt) => {
+        const key = evt.key;
+
+        if (key === 'Escape') {
+            ELEMENTS.forEach((item) => {
+                const section = item[0];
+                const button = item[1];    
+                const hasBody = item[2];  
+                const fixed = button.dataset.clickFixed ? true : false;   
+
+                if (fixed) return;
+
+                section.classList.remove('show');
+                button.classList.remove('active');
+                ELEMENTS.delete(button);
+
+                if (hasBody) {
+                    removeClassFromBody(hasBody);
+                }
+            });
+        } 
     });
 };
